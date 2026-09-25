@@ -1,3 +1,5 @@
+const fs = require("fs/promises");
+
 const readLine = require("readline");
 const today = new Date();
 const rl = readLine.createInterface({
@@ -24,7 +26,7 @@ const pedirFecha = async () =>{
     const year = Number(await preguntar("Ingrese el año de nacimiento: "));
     const month = Number(await preguntar("Ingrese el mes de nacimiento: "));
     const day = Number(await preguntar("Ingrese el dia de nacimiento: "));
-    if(isNaN(year) || isNaN(month) || isNaN(day)){
+    if(Number.isNaN(year) || Number.isNaN(month) || Number.isNaN(day)){
         throw new Error("la fecha ingresada no es valida");
     }
     const client = new Date(year, month - 1, day);
@@ -38,9 +40,30 @@ const pedirFecha = async () =>{
     }
     return client;
 }
+const cargarPersonas = async () =>{
+    try{
+        const datos = await fs.readFile("personas.json", "utf-8");
+        const personas = JSON.parse(datos);
+        personas.forEach(persona =>{
+            persona.fechaNacimiento = new Date(persona.fechaNacimiento)
+        });
+        return personas;
+    }catch(error){
+        if(error.code === "ENOENT"){
+            await fs.writeFile("personas.json", "[]");
+            return [];
+        }else{
+            throw error;
+        }
+    }
+}
+const guardarPersonas = async (personas) =>{
+    const datos = JSON.stringify(personas, null, 2);
+    await fs.writeFile("personas.json", datos);
+}
 const main = async () =>{
     let fun = false;
-    let personas = [];
+    let personas = await cargarPersonas();
     while(!fun){
         try{
             console.log("1. Calcular edad\n2. Guardar persona\n3. Ver personas\n4. Buscar persona\n5. Estadísticas\n6. Salir");
@@ -57,6 +80,8 @@ const main = async () =>{
                         fechaNacimiento: await pedirFecha()
                     };
                     personas.push(persona);
+                    await guardarPersonas(personas);
+                    console.log("Persona guardada correctamente.");
                 break;
                 case "3":
                     if(personas.length === 0){
